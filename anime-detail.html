@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-TW"> <head>
+    <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>動畫詳細資訊</title> 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* --- 基礎樣式與變數定義 --- */
+        :root {
+            --bg-color: #f4f4f9; --text-color: #333; --text-color-subtle: #555; --card-bg: #fff; --header-bg: #fff;
+            --border-color: #ddd; --highlight-bg: #e7f1ff; --primary-color: #5b69e2; --primary-color-hover: #4a56c4;
+            --shadow-color: rgba(0,0,0,0.1); --footer-bg: #333; --footer-text: #fff; --footer-text-subtle: #ccc;
+            --subtle-text: #777;
+            --star-color: #ffc107; --star-inactive: #e4e5e9;
+        }
+        body.dark-mode {
+            --bg-color: #1a1a1a; --text-color: #e0e0e0; --text-color-subtle: #bbb; --card-bg: #2c2c2c; --header-bg: #252525;
+            --border-color: #444; --highlight-bg: #2a3a5e; --primary-color: #7b8aff; --primary-color-hover: #6a79e2;
+            --shadow-color: rgba(0,0,0,0.4); --footer-bg: #222; --footer-text: #e0e0e0; --footer-text-subtle: #888;
+            --subtle-text: #999;
+            --star-inactive: #555;
+        }
+        html { height: 100%; }
+        body { display: flex; flex-direction: column; min-height: 100%; font-family: Arial, sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-color); transition: background-color 0.3s, color 0.3s; }
+        .content-wrapper { flex: 1; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        /* --- 導覽列樣式 --- */
+        .navbar { background-color: var(--header-bg); padding: 0; border-bottom: 1px solid var(--border-color); transition: background-color 0.3s, border-color 0.3s; height: 80px; display: flex; align-items: center; position: relative; }
+        .nav-container { width: 100%; padding: 0 30px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; height: 100%; }
+        .nav-left { display: flex; align-items: center; z-index: 20; background-color: var(--header-bg); position: relative; }
+        .hamburger-btn { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-color); padding: 5px; margin-right: 15px; line-height: 1; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: var(--text-color); text-decoration: none; white-space: nowrap; }
+        .nav-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 100%; max-width: 400px; display: flex; justify-content: center; z-index: 5; pointer-events: none; }
+        .search-container { display: flex; width: 100%; pointer-events: auto; }
+        .search-container input { flex-grow: 1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 4px 0 0 4px; border-right: none; background-color: var(--card-bg); color: var(--text-color); }
+        .search-container button { padding: 8px 15px; background-color: var(--primary-color); color: white; border: none; border-radius: 0 4px 4px 0; cursor: pointer; white-space: nowrap; }
+        .nav-right { display: flex; align-items: center; gap: 20px; z-index: 10; background-color: var(--header-bg); }
+        .main-nav { display: flex; align-items: center; gap: 20px; }
+        .nav-link { text-decoration: none; color: var(--text-color-subtle); white-space: nowrap; font-size: 0.95rem; font-weight: 500; }
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-toggle { background: none; border: none; cursor: pointer; font-size: 0.95rem; font-family: inherit; color: var(--text-color-subtle); white-space: nowrap; font-weight: 500; }
+        .dropdown-menu { display: none; position: absolute; right: 0; top: 100%; background-color: var(--card-bg); min-width: 200px; box-shadow: 0px 8px 16px 0px var(--shadow-color); z-index: 20; border-radius: 5px; padding: 5px 0; border: 1px solid var(--border-color); }
+        .dropdown-menu a { color: var(--text-color); padding: 12px 16px; text-decoration: none; display: block; }
+        .dropdown-menu a:hover { background-color: var(--bg-color); }
+        .dropdown:hover .dropdown-menu { display: block; }
+        .theme-toggle { background: none; border: none; cursor: pointer; font-size: 1.2rem; padding: 5px; color: var(--text-color-subtle); display: flex; align-items: center; }
+        .auth-container { display: flex; align-items: center; gap: 10px; margin-left: 10px; }
+        .user-info { display: none; align-items: center; gap: 10px; margin-left: 10px; }
+        .auth-btn { padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; border: 1px solid transparent; white-space: nowrap; font-weight: bold; }
+        .btn-login { background-color: var(--primary-color); color: white; }
+        .btn-login:hover { background-color: var(--primary-color-hover); transform: translateY(-1px); }
+        .btn-register { background-color: transparent; border-color: var(--primary-color); color: var(--primary-color); }
+        .btn-register:hover { background-color: var(--highlight-bg); transform: translateY(-1px); }
+        .user-name { font-weight: bold; color: var(--primary-color); max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .btn-logout { background-color: #ff4d4d; color: white; padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
+        .btn-logout:hover { background-color: #cc0000; }
+
+        /* --- 主要內容區塊樣式 --- */
+        main.container { opacity: 0; transition: opacity 0.5s ease-in-out; }
+        main.container.loaded { opacity: 1; }
+        .detail-box { background-color: var(--card-bg); border-radius: 8px; box-shadow: 0 4px 15px var(--shadow-color); padding: 25px; display: flex; gap: 30px; transition: background-color 0.3s; }
+        .detail-left { flex-shrink: 0; width: 300px; } 
+        .detail-left img { width: 100%; border-radius: 8px; } 
+        .detail-right { flex-grow: 1; } 
+        .detail-right h1 { margin-top: 0; margin-bottom: 5px; } 
+        .detail-right .original-title { color: var(--subtle-text); margin-bottom: 20px; } 
+        .info-section { border-top: 1px solid var(--border-color); padding: 15px 0; } 
+        .info-section h3 { margin-top: 0; font-size: 1.1rem; font-weight: bold; } 
+        .source-tag-container { padding: 15px 0; border-top: 1px solid var(--border-color); }
+        .source-tag { background-color: #e7f5ff; color: #1c7ed6; padding: 5px 12px; border-radius: 15px; font-size: 0.9rem; display: inline-block; } 
+        .platform-tags-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .platform-tag { background-color: #fff7e6; color: #d97706; padding: 5px 12px; border-radius: 15px; font-size: 0.9rem; display: inline-block; } 
+        .studio-tags-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .studio-tag { background-color: #f1f3f5; color: #495057; padding: 5px 12px; border-radius: 15px; font-size: 0.9rem; display: inline-block; } 
+        .videos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .video-thumb { text-align: center; cursor: pointer; } 
+        .video-thumb img { width: 100%; border: 1px solid var(--border-color); border-radius: 5px; transition: opacity 0.2s; } 
+        .video-thumb:hover img { opacity: 0.8; } 
+        .lightbox-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.85); display: flex; justify-content: center; align-items: center; z-index: 2000; opacity: 0; visibility: hidden; transition: opacity 0.3s ease; } 
+        .lightbox-overlay.active { opacity: 1; visibility: visible; } 
+        .lightbox-content { position: relative; width: 90%; max-width: 1120px; padding: 0; background: black; } 
+        .lightbox-content iframe { width: 100%; height: calc(100vw * 9 / 16 * 0.9); max-height: calc(1120px * 9 / 16); border: none; display: block; } 
+        .lightbox-close { position: fixed; top: 20px; right: 25px; font-size: 3rem; font-weight: bold; color: #fff; cursor: pointer; z-index: 2001; text-shadow: 0 2px 5px rgba(0,0,0,0.7); line-height: 1; transition: transform 0.2s ease, color 0.2s ease; } 
+        .lightbox-close:hover { transform: scale(1.15); color: #ffc107; }
+
+        /* --- 按鈕樣式 --- */
+        .btn-add-watchlist {
+            display: block; width: 100%; margin-top: 15px; padding: 12px 0; background-color: #87CEFA; color: #fff; border: none; border-radius: 5px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: all 0.3s ease; text-align: center;
+        }
+        .btn-add-watchlist:hover { background-color: #5dade2; }
+        .btn-add-watchlist.added { background-color: #ff4d4d; }
+        .btn-add-watchlist.added:hover { background-color: #cc0000; }
+
+        /* --- 評價系統樣式 --- */
+        .reviews-section { margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--border-color); }
+        .review-stats { margin-bottom: 15px; text-align: center; background: var(--highlight-bg); padding: 10px; border-radius: 5px; }
+        .average-score { font-size: 2.5rem; font-weight: bold; color: var(--primary-color); display: block; line-height: 1; }
+        .total-reviews { color: var(--subtle-text); font-size: 0.9rem; }
+        
+        .review-form-card { background-color: var(--bg-color); padding: 15px; border-radius: 5px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+        
+        /* 自己的評價 (已評價狀態) 樣式 */
+        .my-review-card { background-color: #f0f7ff; border: 1px solid #cce5ff; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        body.dark-mode .my-review-card { background-color: #2a3a5e; border-color: #444; }
+        .my-review-title { font-weight: bold; margin-bottom: 10px; display: block; color: var(--primary-color); }
+        .btn-delete-review { background-color: #ff4d4d; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; margin-top: 10px; }
+        .btn-delete-review:hover { background-color: #cc0000; }
+
+        .star-rating { display: flex; justify-content: center; gap: 5px; margin-bottom: 10px; font-size: 1.8rem; cursor: pointer; }
+        .star { color: var(--star-inactive); transition: color 0.1s ease; }
+        .star.active { color: var(--star-color); }
+        
+        .review-textarea { width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; min-height: 60px; box-sizing: border-box; background-color: var(--card-bg); color: var(--text-color); margin-bottom: 10px; font-family: inherit; }
+        .submit-review-btn { width: 100%; padding: 8px; background-color: var(--primary-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .submit-review-btn:hover { background-color: var(--primary-color-hover); }
+        .login-placeholder-btn { width: 100%; padding: 10px; background-color: var(--border-color); color: var(--text-color-subtle); border: none; border-radius: 4px; cursor: pointer; text-align: center; }
+        .login-placeholder-btn:hover { background-color: #ccc; }
+
+        .reviews-list { display: flex; flex-direction: column; gap: 15px; max-height: 500px; overflow-y: auto; }
+        .review-item { background-color: var(--bg-color); padding: 12px; border-radius: 5px; border-left: 4px solid var(--primary-color); }
+        .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; font-size: 0.9rem; }
+        .reviewer-name { font-weight: bold; color: var(--text-color); }
+        .review-date { color: var(--subtle-text); font-size: 0.8rem; }
+        .review-stars { color: var(--star-color); font-size: 0.9rem; }
+        .review-content { color: var(--text-color-subtle); font-size: 0.95rem; line-height: 1.4; word-wrap: break-word; }
+
+        /* --- 頁尾 --- */
+        .site-footer { text-align: center; padding: 15px 20px; background-color: var(--footer-bg); color: var(--footer-text); }
+        .site-footer p { margin: 5px 0; }
+        .contact-info { font-size: 0.9em; color: var(--footer-text-subtle); }
+
+        /* --- 響應式與防撞設計 --- */
+        @media (max-width: 1350px) { .nav-center { position: static; transform: none; flex-grow: 1; margin: 0 20px; justify-content: center; pointer-events: auto; } .search-container { max-width: 100%; } }
+        @media (max-width: 992px) { 
+            .nav-right { display: none; } .hamburger-btn { display: block; } .nav-container { padding: 0 15px; } 
+            .nav-center { position: static; transform: none; flex-grow: 1; margin-left: 10px; margin-right: 0; justify-content: flex-end; pointer-events: auto; } .search-container { max-width: 100%; }
+            .detail-box { flex-direction: column; } .detail-left { width: 100%; max-width: 300px; margin: 0 auto; } 
+        }
+        /* Mobile Menu */
+        .mobile-nav-panel { display: block; position: fixed; top: 0; left: 0; width: 280px; height: 100%; background-color: var(--header-bg); z-index: 1500; transform: translateX(-100%); transition: transform 0.3s ease-in-out; border-right: 1px solid var(--border-color); padding-top: 20px; box-shadow: 3px 0 15px rgba(0,0,0,0.2); overflow-y: auto; }
+        .mobile-nav-panel.open { transform: translateX(0); }
+        .nav-overlay { display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1400; opacity: 0; visibility: hidden; transition: opacity 0.3s ease-in-out; }
+        .nav-overlay.open { opacity: 1; visibility: visible; }
+        .mobile-nav-panel a, .mobile-nav-panel .dropdown-toggle { color: var(--text-color); padding: 15px 20px; display: block; border-bottom: 1px solid var(--border-color); text-decoration: none; font-size: 1rem; width: 100%; text-align: left; box-sizing: border-box; }
+        .mobile-nav-panel .dropdown-menu { display: none; position: static; box-shadow: none; border: none; background-color: var(--bg-color); width: 100%; }
+        .mobile-nav-panel .dropdown { width: 100%; margin: 0; display: block; }
+        .mobile-nav-panel .dropdown:hover .dropdown-menu { display: block; }
+        .mobile-nav-panel .dropdown-menu a { padding-left: 40px; }
+        .mobile-auth-section { padding: 10px 20px 20px 20px; border-bottom: 1px solid var(--border-color); text-align: center; display: flex; flex-direction: column; gap: 10px; }
+        .mobile-auth-btn { display: block; width: 100%; padding: 12px; border-radius: 5px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); cursor: pointer; font-size: 1rem; }
+    </style>
+</head>
+<body>
+    <script> if (localStorage.getItem('theme') === 'dark') { document.body.classList.add('dark-mode'); } </script>
+    
+    <div id="mobile-nav-panel" class="mobile-nav-panel"></div>
+    <div id="nav-overlay" class="nav-overlay"></div>
+
+    <div class="content-wrapper">
+        <header class="navbar">
+            <div class="nav-container">
+                <div class="nav-left">
+                    <button id="hamburger-btn" class="hamburger-btn">☰</button>
+                    <a href="index.html" class="logo">動畫資訊</a>
+                </div>
+                <div class="nav-center">
+                    <form action="search.html" method="get" class="search-container">
+                        <input type="text" name="q" placeholder="搜尋動畫..." required>
+                        <button type="submit">搜尋</button>
+                    </form>
+                </div>
+                <div class="nav-right">
+                    <nav class="main-nav">
+                        <a href="watchlist.html" class="nav-link">我的片單</a>
+                        <a href="hype.html" class="nav-link">新番期待度</a>
+                        <div class="dropdown">
+                            <button class="nav-link dropdown-toggle">新番動畫表 &#9662;</button>
+                            <div class="dropdown-menu">
+                                <a href="bangumi.html?season=2025-fall">2025年10月 (秋季新番)</a>
+                                <a href="bangumi.html?season=2026-winter">2026年1月 (冬季新番)</a>
+                            </div>
+                        </div>
+                    </nav>
+                    <button id="theme-toggle-btn" class="theme-toggle" title="切換主題">🌙</button>
+                    <div id="auth-buttons" class="auth-container">
+                        <button id="nav-login-btn" class="auth-btn btn-login">登入</button>
+                        <button id="nav-register-btn" class="auth-btn btn-register">註冊</button>
+                    </div>
+                    <div id="user-info" class="user-info">
+                        <span id="user-display-name" class="user-name">使用者</span>
+                        <button id="nav-logout-btn" class="btn-logout">登出</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="container"> 
+            <div id="detail-main-box" class="detail-box"> 
+                <p>正在載入動畫資訊...</p> 
+            </div> 
+        </main>
+    </div>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; 2025 動畫資訊網站. All Rights Reserved.</p>
+            <p class="contact-info">連絡方式：service@animesinfo.tw</p>
+        </div>
+    </footer>
+
+    <div id="video-lightbox" class="lightbox-overlay">
+        <span class="lightbox-close">&times;</span> <div class="lightbox-content">
+            <iframe id="youtube-iframe" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
+    </div>
+    
+    <script src="data.js"></script>
+    <script>
+        const MOCK_USER = { username: 'admin', password: '123', displayName: 'Admin' };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const themeToggleBtn = document.getElementById('theme-toggle-btn');
+            const authButtons = document.getElementById('auth-buttons');
+            const userInfo = document.getElementById('user-info');
+            const userDisplayName = document.getElementById('user-display-name');
+            const loginBtn = document.getElementById('nav-login-btn');
+            const registerBtn = document.getElementById('nav-register-btn');
+            const logoutBtn = document.getElementById('nav-logout-btn');
+            const hamburgerBtn = document.getElementById('hamburger-btn');
+            const mobileNavPanel = document.getElementById('mobile-nav-panel');
+            const navOverlay = document.getElementById('nav-overlay');
+            const mainNav = document.querySelector('.main-nav');
+
+            if (document.body.classList.contains('dark-mode')) { themeToggleBtn.textContent = '☀️'; } else { themeToggleBtn.textContent = '🌙'; }
+            themeToggleBtn.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                if (document.body.classList.contains('dark-mode')) {
+                    localStorage.setItem('theme', 'dark');
+                    themeToggleBtn.textContent = '☀️';
+                } else {
+                    localStorage.setItem('theme', 'light');
+                    themeToggleBtn.textContent = '🌙';
+                }
+            });
+
+            function checkLoginStatus() {
+                const loggedInUser = localStorage.getItem('site_user');
+                if (loggedInUser) {
+                    authButtons.style.display = 'none';
+                    userInfo.style.display = 'flex';
+                    userDisplayName.textContent = loggedInUser;
+                } else {
+                    authButtons.style.display = 'flex';
+                    userInfo.style.display = 'none';
+                }
+                updateMobileMenu(); 
+                // 更新頁面上的動態元素
+                if (typeof window.renderReviewUI === 'function') window.renderReviewUI();
+                if (typeof window.updateWatchlistButtonState === 'function') window.updateWatchlistButtonState();
+            }
+
+            function updateMobileMenu() {
+                mobileNavPanel.innerHTML = '';
+                const loggedInUser = localStorage.getItem('site_user');
+                const authSection = document.createElement('div');
+                authSection.className = 'mobile-auth-section';
+
+                if (loggedInUser) {
+                    authSection.innerHTML = `<p style="margin-bottom:10px; color:var(--text-color);">Hi, <b>${loggedInUser}</b></p><button id="mobile-logout-btn" class="mobile-auth-btn" style="background:#ff4d4d; color:white; border:none;">登出</button>`;
+                } else {
+                    authSection.innerHTML = `<button id="mobile-login-btn" class="mobile-auth-btn" style="background:var(--primary-color); color:white; border:none;">登入</button><button id="mobile-register-btn" class="mobile-auth-btn">註冊</button>`;
+                }
+                mobileNavPanel.appendChild(authSection);
+
+                const themeSection = document.createElement('div');
+                themeSection.style.padding = '15px 20px'; themeSection.style.borderBottom = '1px solid var(--border-color)';
+                themeSection.innerHTML = '<span style="color:var(--text-color); margin-right:10px;">切換主題</span> <button id="mobile-theme-toggle" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">' + (document.body.classList.contains('dark-mode') ? '☀️' : '🌙') + '</button>';
+                mobileNavPanel.appendChild(themeSection);
+                
+                if (mainNav) {
+                    const linksContainer = document.createElement('div');
+                    linksContainer.innerHTML = mainNav.innerHTML;
+                    mobileNavPanel.appendChild(linksContainer);
+                }
+
+                const mLogin = document.getElementById('mobile-login-btn');
+                const mRegister = document.getElementById('mobile-register-btn');
+                const mLogout = document.getElementById('mobile-logout-btn');
+                const mTheme = document.getElementById('mobile-theme-toggle');
+
+                if (mLogin) mLogin.onclick = () => { closeNav(); loginBtn.click(); };
+                if (mRegister) mRegister.onclick = () => { closeNav(); registerBtn.click(); };
+                if (mLogout) mLogout.onclick = () => { closeNav(); logoutBtn.click(); };
+                if (mTheme) mTheme.onclick = () => { themeToggleBtn.click(); mTheme.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙'; };
+            }
+
+            function closeNav() { mobileNavPanel.classList.remove('open'); navOverlay.classList.remove('open'); }
+            
+            hamburgerBtn.addEventListener('click', () => { 
+                mobileNavPanel.classList.toggle('open'); 
+                navOverlay.classList.toggle('open'); 
+            });
+            navOverlay.addEventListener('click', closeNav);
+
+            loginBtn.addEventListener('click', () => {
+                Swal.fire({
+                    title: '會員登入',
+                    html: `<input type="text" id="login-username" class="swal2-input" placeholder="帳號"><input type="password" id="login-password" class="swal2-input" placeholder="密碼">`,
+                    confirmButtonText: '登入', showCancelButton: true, cancelButtonText: '取消', focusConfirm: false,
+                    preConfirm: () => {
+                        const u = Swal.getPopup().querySelector('#login-username').value;
+                        const p = Swal.getPopup().querySelector('#login-password').value;
+                        if (!u || !p) { Swal.showValidationMessage(`請輸入帳號與密碼`); }
+                        return { username: u, password: p };
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        if (result.value.username === MOCK_USER.username && result.value.password === MOCK_USER.password) {
+                            localStorage.setItem('site_user', MOCK_USER.displayName);
+                            checkLoginStatus();
+                            Swal.fire({ icon: 'success', title: '登入成功', text: `歡迎回來，${MOCK_USER.displayName}！`, timer: 1500, showConfirmButton: false });
+                        } else {
+                            Swal.fire({ icon: 'error', title: '登入失敗', text: '帳號或密碼錯誤。' });
+                        }
+                    }
+                });
+            });
+
+            registerBtn.addEventListener('click', () => { Swal.fire({ icon: 'info', title: '註冊功能維護中', text: '請使用測試帳號登入。', confirmButtonText: '了解' }); });
+
+            logoutBtn.addEventListener('click', () => {
+                Swal.fire({ title: '確定要登出嗎？', icon: 'question', showCancelButton: true, confirmButtonText: '登出', cancelButtonText: '取消', confirmButtonColor: '#ff4d4d' }).then((result) => {
+                    if (result.isConfirmed) {
+                        localStorage.removeItem('site_user');
+                        checkLoginStatus();
+                        Swal.fire({ icon: 'success', title: '已登出', timer: 1000, showConfirmButton: false });
+                    }
+                });
+            });
+
+            checkLoginStatus();
+        });
+
+        window.onload = function() {
+            document.querySelector('main.container').classList.add('loaded');
+            const params = new URLSearchParams(window.location.search);
+            const animeId = params.get('id');
+            let foundAnime = null;
+            for (const season in animeData) {
+                const anime = animeData[season].find(a => a.id === animeId);
+                if (anime) { foundAnime = anime; break; }
+            }
+
+            const container = document.getElementById('detail-main-box'); 
+            
+            if (foundAnime) {
+                document.title = foundAnime.title + ' - 動畫資訊';
+                container.innerHTML = `
+                    <div class="detail-left">
+                        <img src="${foundAnime.image}" alt="${foundAnime.title}">
+                        <button id="add-to-watchlist-btn" class="btn-add-watchlist">加入片單</button>
+                        
+                        <div class="reviews-section">
+                            <div class="review-stats">
+                                <span class="average-score" id="avg-score">0.0</span>
+                                <div class="review-stars" id="avg-stars">★★★★★</div>
+                                <span class="total-reviews" id="total-reviews">(0 則評價)</span>
+                            </div>
+                            
+                            <div id="review-form-container">
+                                </div>
+
+                            <div class="reviews-list" id="reviews-list">
+                                </div>
+                        </div>
+
+                    </div>
+                    <div class="detail-right">
+                        <h1>${foundAnime.title}</h1>
+                        <p class="original-title">${foundAnime.originalTitle}</p>
+                        <div class="info-section"><p>${foundAnime.broadcastInfo}</p> <p>${foundAnime.episodes}</p> </div>
+                        <div class="source-tag-container"><span class="source-tag">${foundAnime.sourceTag}</span> </div>
+                        ${(foundAnime.copyrightInfo || (foundAnime.platforms && foundAnime.platforms.length > 0)) ? `
+                        <div class="info-section">
+                            ${foundAnime.copyrightInfo || ''} ${(foundAnime.platforms && foundAnime.platforms.length > 0) ? `<div class="platform-tags-container">${foundAnime.platforms.map(platform => `<span class="platform-tag">${platform}</span>`).join('')}</div>` : ''}
+                        </div>` : ''}
+                        ${(foundAnime.animationStudios && foundAnime.animationStudios.length > 0) ? `
+                        <div class="info-section"><h3>動畫製作</h3><div class="studio-tags-container">${foundAnime.animationStudios.map(studio => `<span class="studio-tag">${studio}</span>`).join('')}</div></div>` : ''}
+                        <div class="info-section"><h3>作品簡介</h3><p>${foundAnime.synopsis}</p> </div>
+                        ${(foundAnime.promoVideos && foundAnime.promoVideos.length > 0) ? `
+                        <div class="info-section"><h3>宣傳影片</h3><div class="videos-grid">${foundAnime.promoVideos.map((video, index) => `<div class="video-thumb" data-video-url="${video.url}"> <img src="https://img.youtube.com/vi/${video.url.split('/').pop()}/mqdefault.jpg" alt="${video.title}"> <p>${video.title}</p> </div>`).join('')}</div></div>` : ''}
+                    </div>`;
+
+                // --- 加入片單邏輯 (需登入 + 專屬片單) ---
+                const addBtn = document.getElementById('add-to-watchlist-btn');
+                
+                // 將函式掛載到 window 以便 checkLoginStatus 呼叫
+                window.updateWatchlistButtonState = function() {
+                    const currentUser = localStorage.getItem('site_user');
+                    if (!currentUser) {
+                        // 未登入：恢復預設狀態
+                        addBtn.innerText = "加入片單";
+                        addBtn.classList.remove('added');
+                        return;
+                    }
+                    // 已登入：讀取該使用者的片單
+                    const listKey = `watchlist_${currentUser}`;
+                    const watchlist = JSON.parse(localStorage.getItem(listKey)) || [];
+                    const isAdded = watchlist.some(item => item.id === foundAnime.id);
+
+                    if (isAdded) {
+                        addBtn.innerText = "移除片單";
+                        addBtn.classList.add('added');
+                    } else {
+                        addBtn.innerText = "加入片單";
+                        addBtn.classList.remove('added');
+                    }
+                };
+                
+                // 初始化檢查按鈕狀態
+                window.updateWatchlistButtonState();
+
+                addBtn.addEventListener('click', () => {
+                    const currentUser = localStorage.getItem('site_user');
+                    
+                    // 1. 未登入檢查
+                    if (!currentUser) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: '請先登入',
+                            text: '登入後才能使用加入片單功能喔！',
+                            confirmButtonText: '去登入',
+                            showCancelButton: true,
+                            cancelButtonText: '取消'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                document.getElementById('nav-login-btn').click();
+                            }
+                        });
+                        return;
+                    }
+
+                    // 2. 已登入邏輯
+                    const listKey = `watchlist_${currentUser}`;
+                    let watchlist = JSON.parse(localStorage.getItem(listKey)) || [];
+                    const isAdded = watchlist.some(item => item.id === foundAnime.id);
+
+                    if (isAdded) {
+                        // 移除
+                        Swal.fire({
+                            title: '確定要從片單移除這部動畫嗎？',
+                            text: "移除後需重新加入才能看到。",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#ff4d4d',
+                            cancelButtonColor: '#3085d6',
+                            confirmButtonText: '是的，移除！',
+                            cancelButtonText: '取消'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                watchlist = watchlist.filter(item => item.id !== foundAnime.id);
+                                localStorage.setItem(listKey, JSON.stringify(watchlist));
+                                window.updateWatchlistButtonState();
+                                Swal.fire({ title: '已移除！', text: '該動畫已從您的片單移除。', icon: 'success', timer: 1500, showConfirmButton: false });
+                            }
+                        });
+                    } else {
+                        // 加入
+                        watchlist.push({
+                            id: foundAnime.id,
+                            title: foundAnime.title,
+                            image: foundAnime.image,
+                            link: `anime-detail.html?id=${foundAnime.id}`
+                        });
+                        localStorage.setItem(listKey, JSON.stringify(watchlist));
+                        window.updateWatchlistButtonState();
+                        Swal.fire({ position: 'center', icon: 'success', title: '已成功加入「我的片單」！', showConfirmButton: false, timer: 1500 });
+                    }
+                });
+                
+                // --- 影片燈箱邏輯 ---
+                const lightbox = document.getElementById('video-lightbox'); 
+                const lightboxClose = document.querySelector('.lightbox-close'); 
+                const youtubeIframe = document.getElementById('youtube-iframe'); 
+                const videoThumbs = document.querySelectorAll('.video-thumb'); 
+                videoThumbs.forEach(thumb => {
+                    thumb.addEventListener('click', function() {
+                        const videoUrl = this.getAttribute('data-video-url'); 
+                        if (videoUrl && videoUrl !== '#') { youtubeIframe.src = videoUrl + '?autoplay=1&modestbranding=1&rel=0'; lightbox.classList.add('active'); document.body.style.overflow = 'hidden'; }
+                    });
+                });
+                function closeLightbox() { lightbox.classList.remove('active'); youtubeIframe.src = ''; document.body.style.overflow = ''; }
+                lightboxClose.addEventListener('click', closeLightbox);
+                lightbox.addEventListener('click', function(event) { if (event.target === lightbox) { closeLightbox(); } });
+
+                // --- 評價系統邏輯 (含刪除與一人一評) ---
+                let selectedRating = 0;
+                
+                function getReviews() {
+                    const allReviews = JSON.parse(localStorage.getItem('anime_reviews')) || {};
+                    return allReviews[animeId] || [];
+                }
+
+                function saveReview(rating, comment) {
+                    const allReviews = JSON.parse(localStorage.getItem('anime_reviews')) || {};
+                    if (!allReviews[animeId]) { allReviews[animeId] = []; }
+                    
+                    const currentUser = localStorage.getItem('site_user') || '匿名';
+                    
+                    if (allReviews[animeId].some(r => r.user === currentUser)) {
+                        Swal.fire({ icon: 'error', title: '您已評價過此動畫！' });
+                        return;
+                    }
+
+                    const now = new Date();
+                    const dateString = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()}`;
+
+                    allReviews[animeId].unshift({
+                        user: currentUser,
+                        rating: rating,
+                        comment: comment,
+                        date: dateString
+                    });
+                    
+                    localStorage.setItem('anime_reviews', JSON.stringify(allReviews));
+                    renderReviews();
+                    updateAverageStats();
+                    window.renderReviewUI(); 
+                }
+
+                window.deleteReview = function() {
+                    const currentUser = localStorage.getItem('site_user');
+                    if (!currentUser) return;
+
+                    Swal.fire({
+                        title: '確定要刪除評價嗎？',
+                        text: "刪除後可以重新評分。",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#ff4d4d',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: '刪除',
+                        cancelButtonText: '取消'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const allReviews = JSON.parse(localStorage.getItem('anime_reviews')) || {};
+                            if (allReviews[animeId]) {
+                                allReviews[animeId] = allReviews[animeId].filter(r => r.user !== currentUser);
+                                localStorage.setItem('anime_reviews', JSON.stringify(allReviews));
+                                
+                                renderReviews();
+                                updateAverageStats();
+                                window.renderReviewUI(); 
+                                
+                                Swal.fire({ title: '已刪除！', icon: 'success', timer: 1000, showConfirmButton: false });
+                            }
+                        }
+                    });
+                };
+
+                function updateAverageStats() {
+                    const reviews = getReviews();
+                    const avgScoreEl = document.getElementById('avg-score');
+                    const avgStarsEl = document.getElementById('avg-stars');
+                    const totalReviewsEl = document.getElementById('total-reviews');
+
+                    if (reviews.length === 0) {
+                        avgScoreEl.innerText = "0.0";
+                        avgStarsEl.innerHTML = renderStars(0);
+                        totalReviewsEl.innerText = "(尚無評價)";
+                        return;
+                    }
+
+                    const sum = reviews.reduce((acc, curr) => acc + curr.rating, 0);
+                    const avg = (sum / reviews.length).toFixed(1);
+                    
+                    avgScoreEl.innerText = avg;
+                    avgStarsEl.innerHTML = renderStars(Math.round(avg));
+                    totalReviewsEl.innerText = `(${reviews.length} 則評價)`;
+                }
+
+                function renderStars(count) {
+                    let html = '';
+                    for (let i = 1; i <= 5; i++) {
+                        html += i <= count ? '★' : '☆';
+                    }
+                    return html;
+                }
+
+                function renderReviews() {
+                    const reviews = getReviews();
+                    const listContainer = document.getElementById('reviews-list');
+                    listContainer.innerHTML = '';
+
+                    reviews.forEach(review => {
+                        const div = document.createElement('div');
+                        div.className = 'review-item';
+                        div.innerHTML = `
+                            <div class="review-header">
+                                <span class="reviewer-name">${review.user}</span>
+                                <span class="review-date">${review.date}</span>
+                            </div>
+                            <div class="review-stars">${renderStars(review.rating)}</div>
+                            <div class="review-content">${review.comment}</div>
+                        `;
+                        listContainer.appendChild(div);
+                    });
+                }
+
+                function highlightStars(count) {
+                    const stars = document.querySelectorAll('#star-input .star');
+                    stars.forEach(s => {
+                        const starVal = parseInt(s.getAttribute('data-value'));
+                        if (starVal <= count) {
+                            s.classList.add('active');
+                        } else {
+                            s.classList.remove('active');
+                        }
+                    });
+                }
+
+                // 掛載到 window
+                window.renderReviewUI = function() {
+                    const container = document.getElementById('review-form-container');
+                    if(!container) return; // 防止在非 detail 頁面報錯
+                    
+                    const loggedInUser = localStorage.getItem('site_user');
+                    
+                    // 1. 未登入
+                    if (!loggedInUser) {
+                        container.innerHTML = `
+                            <button class="login-placeholder-btn" onclick="document.getElementById('nav-login-btn').click()">
+                                請先登入以撰寫評價
+                            </button>
+                        `;
+                        return;
+                    }
+
+                    // 2. 已登入，檢查是否評價過
+                    const reviews = getReviews();
+                    const myReview = reviews.find(r => r.user === loggedInUser);
+
+                    if (myReview) {
+                        container.innerHTML = `
+                            <div class="my-review-card">
+                                <span class="my-review-title">您已評價過此動畫：</span>
+                                <div class="review-stars">${renderStars(myReview.rating)}</div>
+                                <div class="review-content" style="margin:5px 0;">${myReview.comment}</div>
+                                <button class="btn-delete-review" onclick="deleteReview()">刪除評價</button>
+                            </div>
+                        `;
+                    } else {
+                        container.innerHTML = `
+                            <div class="review-form-card">
+                                <div class="star-rating" id="star-input">
+                                    <span class="star" data-value="1">★</span>
+                                    <span class="star" data-value="2">★</span>
+                                    <span class="star" data-value="3">★</span>
+                                    <span class="star" data-value="4">★</span>
+                                    <span class="star" data-value="5">★</span>
+                                </div>
+                                <textarea class="review-textarea" id="review-comment" placeholder="寫下你的想法..."></textarea>
+                                <button class="submit-review-btn" id="submit-review">送出評價</button>
+                            </div>
+                        `;
+                        
+                        const stars = container.querySelectorAll('.star');
+                        const starContainer = document.getElementById('star-input');
+
+                        stars.forEach(star => {
+                            star.addEventListener('mouseover', function() {
+                                const val = parseInt(this.getAttribute('data-value'));
+                                highlightStars(val);
+                            });
+                            star.addEventListener('click', function() {
+                                selectedRating = parseInt(this.getAttribute('data-value'));
+                                highlightStars(selectedRating);
+                            });
+                        });
+
+                        starContainer.addEventListener('mouseleave', function() {
+                            highlightStars(selectedRating);
+                        });
+
+                        document.getElementById('submit-review').addEventListener('click', () => {
+                            const comment = document.getElementById('review-comment').value.trim();
+                            if (selectedRating === 0) {
+                                Swal.fire({ icon: 'warning', title: '請點選星星評分！', timer: 1500, showConfirmButton: false });
+                                return;
+                            }
+                            if (!comment) {
+                                Swal.fire({ icon: 'warning', title: '請輸入留言內容！', timer: 1500, showConfirmButton: false });
+                                return;
+                            }
+                            saveReview(selectedRating, comment);
+                            selectedRating = 0;
+                            Swal.fire({ icon: 'success', title: '評價已送出！', timer: 1500, showConfirmButton: false });
+                        });
+                    }
+                };
+
+                renderReviewUI();
+                renderReviews();
+                updateAverageStats();
+
+            } else { 
+                container.innerHTML = '<h1>找不到動畫資訊。</h1>'; 
+            }
+        };
+    </script>
+</body>
+</html>

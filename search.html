@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-TW"> <head>
+    <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>搜尋結果 - 動畫資訊</title> 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --bg-color: #f4f4f9; --text-color: #333; --text-color-subtle: #555; --card-bg: #fff; --header-bg: #fff;
+            --border-color: #ddd; --highlight-bg: #e7f1ff; --primary-color: #5b69e2; --primary-color-hover: #4a56c4;
+            --shadow-color: rgba(0,0,0,0.1); --footer-bg: #333; --footer-text: #fff; --footer-text-subtle: #ccc;
+        }
+        body.dark-mode {
+            --bg-color: #1a1a1a; --text-color: #e0e0e0; --text-color-subtle: #bbb; --card-bg: #2c2c2c; --header-bg: #252525;
+            --border-color: #444; --highlight-bg: #2a3a5e; --primary-color: #7b8aff; --primary-color-hover: #6a79e2;
+            --shadow-color: rgba(0,0,0,0.4); --footer-bg: #222; --footer-text: #e0e0e0; --footer-text-subtle: #888;
+        }
+        html { height: 100%; }
+        body { display: flex; flex-direction: column; min-height: 100%; font-family: Arial, sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-color); transition: background-color 0.3s, color 0.3s; }
+        .content-wrapper { flex: 1; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        
+        /* Navbar Styles (Consistent) */
+        .navbar { background-color: var(--header-bg); padding: 0; border-bottom: 1px solid var(--border-color); transition: background-color 0.3s, border-color 0.3s; height: 80px; display: flex; align-items: center; position: relative; }
+        .nav-container { width: 100%; padding: 0 30px; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; height: 100%; }
+        .nav-left { display: flex; align-items: center; z-index: 20; background-color: var(--header-bg); position: relative; }
+        .hamburger-btn { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-color); padding: 5px; margin-right: 15px; line-height: 1; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: var(--text-color); text-decoration: none; white-space: nowrap; }
+        .nav-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 100%; max-width: 400px; display: flex; justify-content: center; z-index: 5; pointer-events: none; }
+        .search-container { display: flex; width: 100%; pointer-events: auto; }
+        .search-container input { flex-grow: 1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 4px 0 0 4px; border-right: none; background-color: var(--card-bg); color: var(--text-color); }
+        .search-container button { padding: 8px 15px; background-color: var(--primary-color); color: white; border: none; border-radius: 0 4px 4px 0; cursor: pointer; white-space: nowrap; }
+        .nav-right { display: flex; align-items: center; gap: 20px; z-index: 10; background-color: var(--header-bg); }
+        .main-nav { display: flex; align-items: center; gap: 20px; }
+        .nav-link { text-decoration: none; color: var(--text-color-subtle); white-space: nowrap; font-size: 0.95rem; font-weight: 500; }
+        .dropdown { position: relative; display: inline-block; }
+        .dropdown-toggle { background: none; border: none; cursor: pointer; font-size: 0.95rem; font-family: inherit; color: var(--text-color-subtle); white-space: nowrap; font-weight: 500; }
+        .dropdown-menu { display: none; position: absolute; right: 0; top: 100%; background-color: var(--card-bg); min-width: 200px; box-shadow: 0px 8px 16px 0px var(--shadow-color); z-index: 20; border-radius: 5px; padding: 5px 0; border: 1px solid var(--border-color); }
+        .dropdown-menu a { color: var(--text-color); padding: 12px 16px; text-decoration: none; display: block; }
+        .dropdown-menu a:hover { background-color: var(--bg-color); }
+        .dropdown:hover .dropdown-menu { display: block; }
+        .theme-toggle { background: none; border: none; cursor: pointer; font-size: 1.2rem; padding: 5px; color: var(--text-color-subtle); display: flex; align-items: center; }
+        .auth-container { display: flex; align-items: center; gap: 10px; margin-left: 10px; }
+        .user-info { display: none; align-items: center; gap: 10px; margin-left: 10px; }
+        .auth-btn { padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; border: 1px solid transparent; white-space: nowrap; font-weight: bold; }
+        .btn-login { background-color: var(--primary-color); color: white; }
+        .btn-login:hover { background-color: var(--primary-color-hover); transform: translateY(-1px); }
+        .btn-register { background-color: transparent; border-color: var(--primary-color); color: var(--primary-color); }
+        .btn-register:hover { background-color: var(--highlight-bg); transform: translateY(-1px); }
+        .user-name { font-weight: bold; color: var(--primary-color); max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .btn-logout { background-color: #ff4d4d; color: white; padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
+        .btn-logout:hover { background-color: #cc0000; }
+
+        /* Page Specific */
+        main.container { opacity: 0; transition: opacity 0.5s ease-in-out; }
+        main.container.loaded { opacity: 1; }
+        .page-title-highlight { display: inline-block; padding: 5px 15px; background-color: var(--highlight-bg); color: var(--primary-color); border-left: 4px solid var(--primary-color); font-size: 1.8em; margin-bottom: 20px; }
+        .anime-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 20px; }
+        .anime-card { display: block; text-decoration: none; color: var(--text-color); background-color: var(--card-bg); border-radius: 8px; box-shadow: 0 2px 5px var(--shadow-color); overflow: hidden; transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s; }
+        .anime-card:hover { transform: translateY(-8px); box-shadow: 0 8px 20px var(--shadow-color); }
+        .anime-card img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; }
+        .card-info { padding: 10px; min-height: 3.5em; display: flex; flex-direction: column; justify-content: center; }
+        .card-info h3 { margin: 0; font-size: 1rem; white-space: normal; overflow-wrap: break-word; }
+        .message { font-size: 1.2rem; color: var(--subtle-text); grid-column: 1 / -1; }
+        .site-footer { text-align: center; padding: 15px 20px; background-color: var(--footer-bg); color: var(--footer-text); }
+        .site-footer p { margin: 5px 0; }
+        .contact-info { font-size: 0.9em; color: var(--footer-text-subtle); }
+
+        /* Responsive */
+        @media (max-width: 1350px) { .nav-center { position: static; transform: none; flex-grow: 1; margin: 0 20px; justify-content: center; pointer-events: auto; } .search-container { max-width: 100%; } }
+        @media (max-width: 1024px) { .anime-grid { grid-template-columns: repeat(4, 1fr); } }
+        @media (max-width: 992px) { 
+            .nav-right { display: none; } .hamburger-btn { display: block; } .nav-container { padding: 0 15px; } 
+            .nav-center { position: static; transform: none; flex-grow: 1; margin-left: 10px; margin-right: 0; justify-content: flex-end; pointer-events: auto; } 
+            .search-container { max-width: 100%; } 
+        }
+        @media (max-width: 768px) { .anime-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 480px) { .anime-grid { grid-template-columns: repeat(2, 1fr); gap: 15px; } .card-info h3 { font-size: 0.9rem; } }
+
+        /* Mobile Menu */
+        .mobile-nav-panel { display: block; position: fixed; top: 0; left: 0; width: 280px; height: 100%; background-color: var(--header-bg); z-index: 1500; transform: translateX(-100%); transition: transform 0.3s ease-in-out; border-right: 1px solid var(--border-color); padding-top: 20px; box-shadow: 3px 0 15px rgba(0,0,0,0.2); overflow-y: auto; }
+        .mobile-nav-panel.open { transform: translateX(0); }
+        .nav-overlay { display: block; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1400; opacity: 0; visibility: hidden; transition: opacity 0.3s ease-in-out; }
+        .nav-overlay.open { opacity: 1; visibility: visible; }
+        .mobile-nav-panel a, .mobile-nav-panel .dropdown-toggle { color: var(--text-color); padding: 15px 20px; display: block; border-bottom: 1px solid var(--border-color); text-decoration: none; font-size: 1rem; width: 100%; text-align: left; box-sizing: border-box; }
+        .mobile-nav-panel .dropdown-menu { display: none; position: static; box-shadow: none; border: none; background-color: var(--bg-color); width: 100%; }
+        .mobile-nav-panel .dropdown { width: 100%; margin: 0; display: block; }
+        .mobile-nav-panel .dropdown:hover .dropdown-menu { display: block; }
+        .mobile-nav-panel .dropdown-menu a { padding-left: 40px; }
+        .mobile-auth-section { padding: 10px 20px 20px 20px; border-bottom: 1px solid var(--border-color); text-align: center; display: flex; flex-direction: column; gap: 10px; }
+        .mobile-auth-btn { display: block; width: 100%; padding: 12px; border-radius: 5px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); cursor: pointer; font-size: 1rem; }
+    </style>
+</head>
+<body>
+    <script> if (localStorage.getItem('theme') === 'dark') { document.body.classList.add('dark-mode'); } </script>
+    <div id="mobile-nav-panel" class="mobile-nav-panel"></div> <div id="nav-overlay" class="nav-overlay"></div>
+    <div class="content-wrapper">
+        <header class="navbar">
+            <div class="nav-container">
+                <div class="nav-left">
+                    <button id="hamburger-btn" class="hamburger-btn">☰</button>
+                    <a href="index.html" class="logo">動畫資訊</a>
+                </div>
+                <div class="nav-center">
+                    <form action="search.html" method="get" class="search-container">
+                        <input type="text" name="q" placeholder="搜尋動畫..." required>
+                        <button type="submit">搜尋</button>
+                    </form>
+                </div>
+                <div class="nav-right">
+                    <nav class="main-nav">
+                        <a href="watchlist.html" class="nav-link">我的片單</a>
+                        <a href="hype.html" class="nav-link">新番期待度</a>
+                        <div class="dropdown">
+                            <button class="nav-link dropdown-toggle">新番動畫表 &#9662;</button>
+                            <div class="dropdown-menu">
+                                <a href="bangumi.html?season=2025-fall">2025年10月 (秋季新番)</a>
+                                <a href="bangumi.html?season=2026-winter">2026年1月 (冬季新番)</a>
+                            </div>
+                        </div>
+                    </nav>
+                    <button id="theme-toggle-btn" class="theme-toggle">🌙</button>
+                    <div id="auth-buttons" class="auth-container">
+                        <button id="nav-login-btn" class="auth-btn btn-login">登入</button>
+                        <button id="nav-register-btn" class="auth-btn btn-register">註冊</button>
+                    </div>
+                    <div id="user-info" class="user-info">
+                        <span id="user-display-name" class="user-name">使用者</span>
+                        <button id="nav-logout-btn" class="btn-logout">登出</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <main class="container">
+            <h2 id="search-results-title" class="page-title-highlight">搜尋結果</h2>
+            <section id="search-grid-container" class="anime-grid"></section>
+        </main>
+    </div>
+    <footer class="site-footer">
+        <div class="container"> <p>&copy; 2025 動畫資訊網站. All Rights Reserved.</p> <p class="contact-info">連絡方式：service@animesinfo.tw</p> </div>
+    </footer>
+    <script src="data.js"></script>
+    <script>
+        const MOCK_USER = { username: 'admin', password: '123', displayName: 'Admin' };
+        document.addEventListener('DOMContentLoaded', () => {
+            const themeToggleBtn = document.getElementById('theme-toggle-btn');
+            const authButtons = document.getElementById('auth-buttons');
+            const userInfo = document.getElementById('user-info');
+            const userDisplayName = document.getElementById('user-display-name');
+            const loginBtn = document.getElementById('nav-login-btn');
+            const registerBtn = document.getElementById('nav-register-btn');
+            const logoutBtn = document.getElementById('nav-logout-btn');
+            const hamburgerBtn = document.getElementById('hamburger-btn');
+            const mobileNavPanel = document.getElementById('mobile-nav-panel');
+            const navOverlay = document.getElementById('nav-overlay');
+            const mainNav = document.querySelector('.main-nav');
+
+            if (document.body.classList.contains('dark-mode')) { themeToggleBtn.textContent = '☀️'; } else { themeToggleBtn.textContent = '🌙'; }
+            themeToggleBtn.addEventListener('click', () => {
+                document.body.classList.toggle('dark-mode');
+                if (document.body.classList.contains('dark-mode')) { localStorage.setItem('theme', 'dark'); themeToggleBtn.textContent = '☀️'; } 
+                else { localStorage.setItem('theme', 'light'); themeToggleBtn.textContent = '🌙'; }
+            });
+
+            function checkLoginStatus() {
+                const loggedInUser = localStorage.getItem('site_user');
+                if (loggedInUser) { authButtons.style.display = 'none'; userInfo.style.display = 'flex'; userDisplayName.textContent = loggedInUser; } 
+                else { authButtons.style.display = 'flex'; userInfo.style.display = 'none'; }
+                updateMobileMenu();
+            }
+
+            function updateMobileMenu() {
+                mobileNavPanel.innerHTML = '';
+                const loggedInUser = localStorage.getItem('site_user');
+                const authSection = document.createElement('div');
+                authSection.className = 'mobile-auth-section';
+                if (loggedInUser) { authSection.innerHTML = `<p style="margin-bottom:10px; color:var(--text-color);">Hi, <b>${loggedInUser}</b></p><button id="mobile-logout-btn" class="mobile-auth-btn" style="background:#ff4d4d; color:white; border:none;">登出</button>`; } 
+                else { authSection.innerHTML = `<button id="mobile-login-btn" class="mobile-auth-btn" style="background:var(--primary-color); color:white; border:none;">登入</button><button id="mobile-register-btn" class="mobile-auth-btn">註冊</button>`; }
+                mobileNavPanel.appendChild(authSection);
+                const themeSection = document.createElement('div');
+                themeSection.style.padding = '15px 20px'; themeSection.style.borderBottom = '1px solid var(--border-color)';
+                themeSection.innerHTML = '<span style="color:var(--text-color); margin-right:10px;">切換主題</span> <button id="mobile-theme-toggle" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">' + (document.body.classList.contains('dark-mode') ? '☀️' : '🌙') + '</button>';
+                mobileNavPanel.appendChild(themeSection);
+                if (mainNav) { const linksContainer = document.createElement('div'); linksContainer.innerHTML = mainNav.innerHTML; mobileNavPanel.appendChild(linksContainer); }
+                
+                const mLogin = document.getElementById('mobile-login-btn'); const mRegister = document.getElementById('mobile-register-btn'); const mLogout = document.getElementById('mobile-logout-btn'); const mTheme = document.getElementById('mobile-theme-toggle');
+                if (mLogin) mLogin.onclick = () => { closeNav(); loginBtn.click(); }; if (mRegister) mRegister.onclick = () => { closeNav(); registerBtn.click(); }; if (mLogout) mLogout.onclick = () => { closeNav(); logoutBtn.click(); }; if (mTheme) mTheme.onclick = () => { themeToggleBtn.click(); mTheme.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙'; };
+            }
+
+            function closeNav() { mobileNavPanel.classList.remove('open'); navOverlay.classList.remove('open'); }
+            hamburgerBtn.addEventListener('click', () => { mobileNavPanel.classList.toggle('open'); navOverlay.classList.toggle('open'); });
+            navOverlay.addEventListener('click', closeNav);
+
+            loginBtn.addEventListener('click', () => {
+                Swal.fire({
+                    title: '會員登入', html: `<input type="text" id="login-username" class="swal2-input" placeholder="帳號"><input type="password" id="login-password" class="swal2-input" placeholder="密碼">`,
+                    confirmButtonText: '登入', showCancelButton: true, cancelButtonText: '取消', focusConfirm: false,
+                    preConfirm: () => { const u = Swal.getPopup().querySelector('#login-username').value; const p = Swal.getPopup().querySelector('#login-password').value; if (!u || !p) { Swal.showValidationMessage(`請輸入帳號與密碼`); } return { username: u, password: p }; }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        if (result.value.username === MOCK_USER.username && result.value.password === MOCK_USER.password) { localStorage.setItem('site_user', MOCK_USER.displayName); checkLoginStatus(); Swal.fire({ icon: 'success', title: '登入成功', text: `歡迎回來，${MOCK_USER.displayName}！`, timer: 1500, showConfirmButton: false }); } 
+                        else { Swal.fire({ icon: 'error', title: '登入失敗', text: '帳號或密碼錯誤。' }); }
+                    }
+                });
+            });
+            registerBtn.addEventListener('click', () => { Swal.fire({ icon: 'info', title: '註冊功能維護中', text: '請使用測試帳號登入。', confirmButtonText: '了解' }); });
+            logoutBtn.addEventListener('click', () => { Swal.fire({ title: '確定要登出嗎？', icon: 'question', showCancelButton: true, confirmButtonText: '登出', cancelButtonText: '取消', confirmButtonColor: '#ff4d4d' }).then((result) => { if (result.isConfirmed) { localStorage.removeItem('site_user'); checkLoginStatus(); Swal.fire({ icon: 'success', title: '已登出', timer: 1000, showConfirmButton: false }); } }); });
+            
+            checkLoginStatus();
+        });
+
+        window.onload = function() {
+            document.querySelector('main.container').classList.add('loaded');
+            const params = new URLSearchParams(window.location.search);
+            const query = params.get('q');
+            const titleElement = document.getElementById('search-results-title');
+            const gridContainer = document.getElementById('search-grid-container');
+
+            if (query) {
+                titleElement.textContent = `搜尋 "${query}" 的結果`;
+                const results = [];
+                const lowerCaseQuery = query.toLowerCase();
+                for (const season in animeData) {
+                    animeData[season].forEach(anime => {
+                        if (anime.title.toLowerCase().includes(lowerCaseQuery) || (anime.originalTitle && anime.originalTitle.toLowerCase().includes(lowerCaseQuery))) {
+                            if (!results.some(r => r.id === anime.id)) { results.push(anime); }
+                        }
+                    });
+                }
+                if (results.length > 0) {
+                    results.forEach(anime => {
+                        const cardHTML = `<a href="anime-detail.html?id=${anime.id}" class="anime-card"><img src="${anime.image}" alt="${anime.title}"><div class="card-info"><h3>${anime.title}</h3></div></a>`;
+                        gridContainer.innerHTML += cardHTML;
+                    });
+                } else { gridContainer.innerHTML = '<p class="message">找不到符合條件的動畫。</p>'; }
+            } else { titleElement.textContent = '請輸入關鍵字進行搜尋'; }
+        };
+    </script>
+</body>
+</html>
